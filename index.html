@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Health Bot Registration</title>
+  <style>
+    body { font-family: Arial; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 50px; background: #f9f9f9; }
+    .container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); width: 300px; margin-bottom: 20px; }
+    input, select { width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; border: 1px solid #ccc; }
+    button { width: 100%; padding: 10px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    button:hover { background: #218838; }
+    .msg { margin-top: 10px; font-size: 14px; color: #333; }
+    .msg.success { color: green; }
+    .msg.error { color: red; }
+    .stats { background: #fff; padding: 15px; border-radius: 10px; box-shadow: 0 0 5px rgba(0,0,0,0.1); width: 300px; }
+    .stats h3 { margin-top: 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Register for Health Alerts</h2>
+    <input type="text" id="name" placeholder="Your Name">
+    <input type="text" id="phone" placeholder="Phone (with country code, e.g. +91)">
+    <input type="text" id="state" placeholder="Your State (optional)">
+    <select id="subscription">
+      <option value="daily">Daily Alerts</option>
+      <option value="weekly">Weekly Alerts</option>
+    </select>
+    <button onclick="registerUser()">Register</button>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div class="stats">
+    <h3>Current Usage Stats:</h3>
+    <p>Total Users: <span id="totalUsers">0</span></p>
+    <p>Daily Subscribers: <span id="dailyUsers">0</span></p>
+    <p>Weekly Subscribers: <span id="weeklyUsers">0</span></p>
+  </div>
+
+  <script>
+    async function registerUser() {
+      const name = document.getElementById('name').value;
+      const phone = document.getElementById('phone').value;
+      const state = document.getElementById('state').value;
+      const subscription = document.getElementById('subscription').value;
+
+      const msgDiv = document.getElementById('msg');
+      msgDiv.innerText = "";
+      msgDiv.className = "msg";
+
+      if(!name || !phone){
+        msgDiv.innerText = "Name and phone are required!";
+        msgDiv.classList.add("error");
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, phone, state, subscription })
+        });
+        const data = await res.json();
+        
+        if(data.message){
+          msgDiv.innerText = data.message;
+          msgDiv.classList.add("success");
+          // Clear form after success
+          document.getElementById('name').value = "";
+          document.getElementById('phone').value = "";
+          document.getElementById('state').value = "";
+          document.getElementById('subscription').value = "daily";
+          // Refresh stats after registration
+          loadStats();
+        } else if(data.error){
+          msgDiv.innerText = data.error;
+          msgDiv.classList.add("error");
+        }
+      } catch (err) {
+        msgDiv.innerText = "Server error. Try again later.";
+        msgDiv.classList.add("error");
+      }
+    }
+
+    async function loadStats() {
+      try {
+        const res = await fetch('/api/stats');
+        const data = await res.json();
+        document.getElementById('totalUsers').innerText = data.totalUsers;
+        document.getElementById('dailyUsers').innerText = data.dailyUsers;
+        document.getElementById('weeklyUsers').innerText = data.weeklyUsers;
+      } catch(err) {
+        console.error("Error loading stats:", err);
+      }
+    }
+
+    // Load stats on page load
+    loadStats();
+    // Refresh stats every 30 seconds
+    setInterval(loadStats, 30000);
+  </script>
+</body>
+</html>
